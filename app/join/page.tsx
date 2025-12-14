@@ -58,14 +58,21 @@ export default function JoinPage() {
 
     try {
       console.log("Submitting form data:", formData)
-
+      
+      // Add timeout to fetch request
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+      
       const response = await fetch("/api/memberships", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(formData),
+        signal: controller.signal
       })
+      
+      clearTimeout(timeoutId)
 
       console.log("Response status:", response.status)
       const data = await response.json()
@@ -96,13 +103,22 @@ export default function JoinPage() {
       } else {
         throw new Error(data.error || "Failed to submit application")
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Submission error:", error)
-      toast({
-        title: "Submission Failed",
-        description: error instanceof Error ? error.message : "Please try again later",
-        variant: "destructive",
-      })
+      
+      if (error.name === 'AbortError') {
+        toast({
+          title: "Request Timeout",
+          description: "The request took too long to complete. Please try again.",
+          variant: "destructive",
+        })
+      } else {
+        toast({
+          title: "Submission Failed",
+          description: error instanceof Error ? error.message : "Please try again later",
+          variant: "destructive",
+        })
+      }
     } finally {
       setIsSubmitting(false)
     }

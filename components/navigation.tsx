@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, memo, useMemo } from "react"
+import { useState, memo, useMemo, useCallback } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Moon, Sun, Menu, X, ChevronDown } from "lucide-react"
@@ -63,6 +63,13 @@ const ThemeToggle = memo(function ThemeToggle() {
 function Navigation() {
   const [isOpen, setIsOpen] = useState(false)
   const pathname = usePathname()
+  
+  // Memoize the navigation items to prevent unnecessary re-renders
+  const memoizedNavItems = useMemo(() => navItems, [])
+  
+  // Use useCallback for event handlers
+  const toggleMenu = useCallback(() => setIsOpen(!isOpen), [isOpen])
+  const closeMenu = useCallback(() => setIsOpen(false), [])
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 dark:bg-gray-900/95 backdrop-blur-xl border-b border-border shadow-sm">
@@ -76,7 +83,7 @@ function Navigation() {
 
           {/* Desktop Navigation */}
           <div className="hidden lg:flex items-center space-x-1">
-            {navItems.map((item) =>
+            {memoizedNavItems.map((item) =>
               item.dropdown ? (
                 <DropdownMenu key={item.name}>
                   <DropdownMenuTrigger asChild>
@@ -105,7 +112,7 @@ function Navigation() {
           <div className="flex items-center gap-2">
             <ThemeToggle />
 
-            <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setIsOpen(!isOpen)}>
+            <Button variant="ghost" size="icon" className="lg:hidden" onClick={toggleMenu}>
               {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </Button>
           </div>
@@ -114,13 +121,13 @@ function Navigation() {
         {/* Mobile Navigation */}
         {isOpen && (
           <div className="lg:hidden py-4 space-y-2 animate-fade-in">
-            {navItems.map((item) => (
+            {memoizedNavItems.map((item) => (
               <div key={item.name}>
                 {item.dropdown ? (
                   <div className="space-y-1">
                     <div className="font-semibold px-4 py-2 text-sm text-muted-foreground">{item.name}</div>
                     {item.dropdown.map((subItem) => (
-                      <Link key={subItem.name} href={subItem.href} onClick={() => setIsOpen(false)}>
+                      <Link key={subItem.name} href={subItem.href} onClick={closeMenu}>
                         <Button variant="ghost" className="w-full justify-start pl-8">
                           {subItem.name}
                         </Button>
@@ -128,7 +135,7 @@ function Navigation() {
                     ))}
                   </div>
                 ) : (
-                  <Link href={item.href} onClick={() => setIsOpen(false)}>
+                  <Link href={item.href} onClick={closeMenu}>
                     <Button variant={pathname === item.href ? "default" : "ghost"} className="w-full justify-start">
                       {item.name}
                     </Button>

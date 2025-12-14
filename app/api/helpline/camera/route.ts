@@ -61,10 +61,15 @@ export async function GET() {
     
     const analyses = await CameraAnalysis.find({}).sort({ createdAt: -1 })
     
-    return NextResponse.json(
+    const response = NextResponse.json(
       { success: true, data: analyses },
       { status: 200 }
     )
+    
+    // Add caching headers for better performance
+    response.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=30')
+    
+    return response
   } catch (error: any) {
     return NextResponse.json(
       { success: false, error: error.message },

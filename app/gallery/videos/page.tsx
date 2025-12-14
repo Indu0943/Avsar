@@ -68,11 +68,13 @@ export default function VideosPage() {
         <div
           className="absolute inset-0 z-0"
           style={{
-            backgroundImage: "url(https://images.unsplash.com/photo-1450778869180-41d0601e046e?w=1920&h=1080&fit=crop&q=80)",
+            backgroundImage: "url(/gallery-hero-collage.jpg)",
             backgroundSize: "cover",
             backgroundPosition: "center",
+            backgroundRepeat: "no-repeat",
           }}
         />
+        <div className="absolute inset-0 bg-black/40 z-0" />
 
         <div className="container relative z-10 px-4 text-center">
           <motion.h1

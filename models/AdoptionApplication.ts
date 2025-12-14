@@ -76,4 +76,9 @@ const AdoptionApplicationSchema = new mongoose.Schema({
   },
 })
 
+// Add indexes for better query performance
+AdoptionApplicationSchema.index({ createdAt: -1 })
+AdoptionApplicationSchema.index({ status: 1 })
+AdoptionApplicationSchema.index({ email: 1 })
+
 export default mongoose.models.AdoptionApplication || mongoose.model('AdoptionApplication', AdoptionApplicationSchema)

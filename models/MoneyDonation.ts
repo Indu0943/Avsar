@@ -31,4 +31,8 @@ const MoneyDonationSchema = new mongoose.Schema({
   },
 })
 
+// Add indexes for better query performance
+MoneyDonationSchema.index({ createdAt: -1 })
+MoneyDonationSchema.index({ email: 1 })
+
 export default mongoose.models.MoneyDonation || mongoose.model('MoneyDonation', MoneyDonationSchema)

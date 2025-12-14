@@ -52,13 +52,20 @@ export default function AdoptionFormPage() {
     setLoading(true)
 
     try {
+      // Add timeout to fetch request
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+      
       const response = await fetch('/api/adoptions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(formData),
+        signal: controller.signal
       })
+      
+      clearTimeout(timeoutId)
 
       const result = await response.json()
 
@@ -93,13 +100,22 @@ export default function AdoptionFormPage() {
           variant: "destructive",
         })
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error submitting form:', error)
-      toast({
-        title: "Network Error",
-        description: "Unable to submit application. Please check your connection and try again.",
-        variant: "destructive",
-      })
+      
+      if (error.name === 'AbortError') {
+        toast({
+          title: "Request Timeout",
+          description: "The request took too long to complete. Please try again.",
+          variant: "destructive",
+        })
+      } else {
+        toast({
+          title: "Network Error",
+          description: "Unable to submit application. Please check your connection and try again.",
+          variant: "destructive",
+        })
+      }
     } finally {
       setLoading(false)
     }

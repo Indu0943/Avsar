@@ -11,6 +11,7 @@ import {
   DollarSign,
   UserPlus,
   TrendingUp,
+  CreditCard,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
@@ -23,6 +24,8 @@ interface Stats {
   moneyDonations: number
   cameraAnalyses: number
   totalDonationAmount: number
+  successfulPayments: number // Added payment stats
+  totalPayments: number // Added payment stats
 }
 
 export default function DashboardStats() {
@@ -37,14 +40,16 @@ export default function DashboardStats() {
     try {
       const response = await fetch('/api/admin/dashboard/stats')
       const data = await response.json()
-      setStats(data.stats)
+      setStats(data.stats || null) // Handle case where stats might be undefined
     } catch (error) {
       console.error('Failed to fetch stats:', error)
+      setStats(null) // Set stats to null on error
     } finally {
       setIsLoading(false)
     }
   }
 
+  // Ensure stats is not null before accessing properties
   const statCards = [
     {
       title: 'Total Adoptions',
@@ -89,15 +94,15 @@ export default function DashboardStats() {
       bgColor: 'bg-yellow-500/10',
     },
     {
-      title: 'Camera Analyses',
-      value: stats?.cameraAnalyses || 0,
-      icon: Camera,
-      color: 'from-indigo-500 to-purple-500',
-      bgColor: 'bg-indigo-500/10',
+      title: 'Successful Payments',
+      value: stats?.successfulPayments || 0, // Added payment stat
+      icon: CreditCard,
+      color: 'from-blue-500 to-cyan-500',
+      bgColor: 'bg-blue-500/10',
     },
     {
       title: 'Total Donation Amount',
-      value: `₹${stats?.totalDonationAmount?.toLocaleString() || 0}`,
+      value: stats?.totalDonationAmount ? `₹${stats.totalDonationAmount.toLocaleString()}` : '₹0',
       icon: TrendingUp,
       color: 'from-teal-500 to-cyan-500',
       bgColor: 'bg-teal-500/10',

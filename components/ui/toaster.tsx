@@ -29,7 +29,7 @@ export function Toaster() {
           </Toast>
         )
       })}
-      <ToastViewport />
+      <ToastViewport className="fixed top-4 right-4 z-[100] sm:top-4 sm:right-4" />
     </ToastProvider>
   )
 }

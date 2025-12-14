@@ -1,16 +1,65 @@
 import { NextResponse } from 'next/server'
 import connectDB from '@/lib/mongodb'
 import Contact from '@/models/Contact'
+import { getFromCache, setInCache } from '@/lib/redis'
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json()
-    
+    // Check if request has body
+    const contentType = request.headers.get('content-type')
+    if (!contentType || !contentType.includes('application/json')) {
+      return NextResponse.json(
+        { success: false, error: 'Content-Type must be application/json' },
+        { status: 400 }
+      )
+    }
+
+    // Check if request body is empty
+    const contentLength = request.headers.get('content-length')
+    if (!contentLength || parseInt(contentLength) === 0) {
+      return NextResponse.json(
+        { success: false, error: 'Request body is empty' },
+        { status: 400 }
+      )
+    }
+
+    // Parse request body with error handling
+    let body;
+    try {
+      body = await request.json()
+    } catch (jsonError) {
+      console.error('Error parsing JSON body:', jsonError)
+      return NextResponse.json(
+        { success: false, error: 'Invalid JSON in request body' },
+        { status: 400 }
+      )
+    }
+
+    // Validate required fields
+    if (!body.firstName || !body.lastName || !body.email || !body.phone || !body.subject || !body.message || !body.inquiryType) {
+      return NextResponse.json(
+        { success: false, error: 'Missing required fields. Please fill in all required information.' },
+        { status: 400 }
+      )
+    }
+
     console.log('Received contact form submission:', body)
+
+    // Connect to database with timeout
+    await Promise.race([
+      connectDB(),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Database connection timeout')), 5000)
+      )
+    ])
     
-    await connectDB()
-    
-    const contact = await Contact.create(body)
+    // Create contact with timeout
+    const contact = await Promise.race([
+      Contact.create(body),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Database operation timeout')), 5000)
+      )
+    ])
     
     console.log('Contact form submitted successfully:', contact._id)
     
@@ -21,7 +70,7 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error('Error creating contact submission:', error)
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: error.message || 'Internal server error' },
       { status: 400 }
     )
   }
@@ -29,14 +78,49 @@ export async function POST(request: Request) {
 
 export async function GET() {
   try {
+    // Try to get from cache first
+    const cacheKey = 'contacts_list'
+    const cachedData = await getFromCache(cacheKey)
+    
+    if (cachedData) {
+      const response = NextResponse.json(
+        { success: true, data: cachedData },
+        { status: 200 }
+      )
+      
+      // Add caching headers
+      response.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=30')
+      response.headers.set('X-Cache', 'HIT')
+      
+      return response
+    }
+    
     await connectDB()
     
-    const contacts = await Contact.find({}).sort({ createdAt: -1 })
+    const contacts = await Contact.find({}, {
+      firstName: 1,
+      lastName: 1,
+      email: 1,
+      phone: 1,
+      subject: 1,
+      inquiryType: 1,
+      status: 1,
+      createdAt: 1
+    }).sort({ createdAt: -1 })
     
-    return NextResponse.json(
+    // Cache the result for 60 seconds
+    await setInCache(cacheKey, contacts, 60)
+    
+    const response = NextResponse.json(
       { success: true, data: contacts },
       { status: 200 }
     )
+    
+    // Add caching headers for better performance
+    response.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=30')
+    response.headers.set('X-Cache', 'MISS')
+    
+    return response
   } catch (error: any) {
     return NextResponse.json(
       { success: false, error: error.message },

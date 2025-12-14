@@ -2,7 +2,6 @@
 
 import { motion } from "framer-motion"
 import { Mail, Phone, Award } from "lucide-react"
-import Image from "next/image"
 
 const staffMembers = [
   {
@@ -66,19 +65,24 @@ export default function StaffPage() {
     <div className="min-h-screen">
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary via-secondary to-accent opacity-90" />
-        <Image 
-          src="https://images.unsplash.com/photo-1628009368231-7bb7cfcb0def?w=1200&h=600&fit=crop" 
-          alt="Our Staff" 
-          fill 
-          className="object-cover mix-blend-overlay" 
-          unoptimized
+        <div
+          className="absolute inset-0 z-0"
+          style={{
+            backgroundImage: "url(https://images.unsplash.com/photo-1628009368231-7bb7cfcb0def?w=1920&h=1080&fit=crop&q=85)",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            backgroundRepeat: "no-repeat",
+          }}
         />
+        
+        {/* Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/60 to-black/70 z-[1]" />
+        
         <div className="relative z-10 text-center text-white px-4">
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-5xl md:text-6xl font-bold mb-4"
+            className="text-5xl md:text-7xl font-bold mb-4"
           >
             Our Staff
           </motion.h1>

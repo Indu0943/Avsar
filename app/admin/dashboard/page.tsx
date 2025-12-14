@@ -80,6 +80,41 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
+      {/* Hero Section with Background */}
+      <section className="relative min-h-[300px] flex items-center justify-center overflow-hidden pt-20">
+        <div
+          className="absolute inset-0 z-0"
+          style={{
+            backgroundImage: "url(https://images.unsplash.com/photo-1507238691154-0c4ee4a90209?w=1920&h=1080&fit=crop&q=85)",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            backgroundRepeat: "no-repeat",
+          }}
+        />
+        
+        {/* Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/40 z-[1]" />
+        
+        {/* Content */}
+        <div className="relative z-10 text-center text-white px-4">
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-4xl md:text-5xl font-bold mb-2"
+          >
+            Admin Dashboard
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="text-lg text-gray-200"
+          >
+            Manage and monitor AVSAR operations
+          </motion.p>
+        </div>
+      </section>
+
       {/* Header */}
       <motion.header
         initial={{ y: -100 }}

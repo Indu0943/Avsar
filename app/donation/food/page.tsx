@@ -3,14 +3,14 @@
 import type React from "react"
 
 import { motion } from "framer-motion"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Heart, DollarSign, Package } from "lucide-react"
+import { Heart, DollarSign, Package, AlertCircle } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
 
@@ -25,14 +25,82 @@ export default function FoodDonationPage() {
     description: "",
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [errors, setErrors] = useState<{[key: string]: string}>({}) // Form errors state
   const { toast } = useToast()
+
+  // Clear errors when user starts typing
+  useEffect(() => {
+    if (Object.keys(errors).length > 0) {
+      const clearErrors = setTimeout(() => {
+        setErrors({})
+      }, 5000) // Clear errors after 5 seconds
+      return () => clearTimeout(clearErrors)
+    }
+  }, [errors])
+
+  const validateForm = () => {
+    const newErrors: {[key: string]: string} = {}
+    
+    if (!formData.name.trim()) {
+      newErrors.name = "Name is required"
+    }
+    
+    if (!formData.email.trim()) {
+      newErrors.email = "Email is required"
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = "Please enter a valid email"
+    }
+    
+    if (!formData.phone.trim()) {
+      newErrors.phone = "Phone number is required"
+    } else if (!/^\+?[1-9]\d{1,14}$/.test(formData.phone.replace(/\s+/g, ''))) {
+      newErrors.phone = "Please enter a valid phone number"
+    }
+    
+    if (!formData.address.trim()) {
+      newErrors.address = "Address is required"
+    }
+    
+    if (!formData.foodType) {
+      newErrors.foodType = "Please select a food type"
+    }
+    
+    if (!formData.quantity.trim()) {
+      newErrors.quantity = "Quantity is required"
+    } else {
+      const quantity = Number(formData.quantity)
+      if (isNaN(quantity) || quantity < 5) {
+        newErrors.quantity = "Minimum donation quantity is 5 kg"
+      }
+    }
+    
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Validate form before submission
+    if (!validateForm()) {
+      toast({
+        title: "Form Validation Error",
+        description: "Please correct the errors in the form before submitting",
+        variant: "destructive",
+        duration: 8000, // Show for 8 seconds
+      })
+      return
+    }
+    
+    const quantity = Number(formData.quantity)
 
     setIsSubmitting(true)
 
     try {
+      // Add timeout to fetch request
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+      
       const response = await fetch('/api/donations/food', {
         method: 'POST',
         headers: {
@@ -48,14 +116,18 @@ export default function FoodDonationPage() {
           pickupDate: new Date(),
           message: formData.description,
         }),
+        signal: controller.signal
       })
+      
+      clearTimeout(timeoutId)
 
       const data = await response.json()
 
-      if (data.success) {
+      if (response.ok && data.success) {
         toast({
-          title: "Thank You!",
-          description: "Your food donation request has been submitted. We'll contact you soon.",
+          title: "Donation Request Submitted!",
+          description: "Your food donation request has been submitted. We'll contact you soon to arrange pickup.",
+          duration: 10000, // Show for 10 seconds
         })
 
         // Reset form
@@ -72,11 +144,21 @@ export default function FoodDonationPage() {
         throw new Error(data.error || 'Failed to submit donation')
       }
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to submit donation. Please try again.",
-        variant: "destructive",
-      })
+      if (error.name === 'AbortError') {
+        toast({
+          title: "Request Timeout",
+          description: "The request took too long to complete. Please try again.",
+          variant: "destructive",
+          duration: 10000, // Show for 10 seconds
+        })
+      } else {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to submit donation. Please try again.",
+          variant: "destructive",
+          duration: 10000, // Show for 10 seconds
+        })
+      }
     } finally {
       setIsSubmitting(false)
     }
@@ -92,6 +174,7 @@ export default function FoodDonationPage() {
             backgroundImage: "url(https://images.unsplash.com/photo-1450778869180-41d0601e046e?w=1920&h=1080&fit=crop&q=85)",
             backgroundSize: "cover",
             backgroundPosition: "center",
+            backgroundRepeat: "no-repeat",
           }}
         />
 
@@ -162,48 +245,116 @@ export default function FoodDonationPage() {
 
                       <div className="space-y-2">
                         <Label htmlFor="name">Full Name *</Label>
+                        {errors.name && (
+                          <div className="flex items-center gap-2 text-sm text-destructive">
+                            <AlertCircle className="h-4 w-4" />
+                            <span>{errors.name}</span>
+                          </div>
+                        )}
                         <Input
                           id="name"
                           required
                           value={formData.name}
-                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                          onChange={(e) => {
+                            setFormData({ ...formData, name: e.target.value })
+                            // Clear name error when user types
+                            if (errors.name) {
+                              setErrors(prev => {
+                                const newErrors = {...prev}
+                                delete newErrors.name
+                                return newErrors
+                              })
+                            }
+                          }}
                           placeholder="Enter your full name"
+                          className={errors.name ? "border-destructive" : ""}
                         />
                       </div>
 
                       <div className="space-y-2">
                         <Label htmlFor="email">Email Address *</Label>
+                        {errors.email && (
+                          <div className="flex items-center gap-2 text-sm text-destructive">
+                            <AlertCircle className="h-4 w-4" />
+                            <span>{errors.email}</span>
+                          </div>
+                        )}
                         <Input
                           id="email"
                           type="email"
                           required
                           value={formData.email}
-                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                          onChange={(e) => {
+                            setFormData({ ...formData, email: e.target.value })
+                            // Clear email error when user types
+                            if (errors.email) {
+                              setErrors(prev => {
+                                const newErrors = {...prev}
+                                delete newErrors.email
+                                return newErrors
+                              })
+                            }
+                          }}
                           placeholder="your.email@example.com"
+                          className={errors.email ? "border-destructive" : ""}
                         />
                       </div>
 
                       <div className="space-y-2">
                         <Label htmlFor="phone">Phone Number *</Label>
+                        {errors.phone && (
+                          <div className="flex items-center gap-2 text-sm text-destructive">
+                            <AlertCircle className="h-4 w-4" />
+                            <span>{errors.phone}</span>
+                          </div>
+                        )}
                         <Input
                           id="phone"
                           type="tel"
                           required
                           value={formData.phone}
-                          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                          onChange={(e) => {
+                            setFormData({ ...formData, phone: e.target.value })
+                            // Clear phone error when user types
+                            if (errors.phone) {
+                              setErrors(prev => {
+                                const newErrors = {...prev}
+                                delete newErrors.phone
+                                return newErrors
+                              })
+                            }
+                          }}
                           placeholder="+91 XXXXX XXXXX"
+                          className={errors.phone ? "border-destructive" : ""}
                         />
                       </div>
 
                       <div className="space-y-2">
                         <Label htmlFor="address">Pickup Address *</Label>
+                        {errors.address && (
+                          <div className="flex items-center gap-2 text-sm text-destructive">
+                            <AlertCircle className="h-4 w-4" />
+                            <span>{errors.address}</span>
+                          </div>
+                        )}
                         <Textarea
                           id="address"
                           required
                           value={formData.address}
-                          onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                          onChange={(e) => {
+                            setFormData({ ...formData, address: e.target.value })
+                            // Clear address error when user types
+                            if (errors.address) {
+                              setErrors(prev => {
+                                const newErrors = {...prev}
+                                delete newErrors.address
+                                return newErrors
+                              })
+                            }
+                          }}
                           placeholder="Enter complete address for food pickup"
                           rows={3}
+                          className={errors.address ? "border-destructive" : ""}
                         />
                       </div>
                     </div>
@@ -214,11 +365,27 @@ export default function FoodDonationPage() {
 
                       <div className="space-y-2">
                         <Label htmlFor="foodType">Type of Food *</Label>
+                        {errors.foodType && (
+                          <div className="flex items-center gap-2 text-sm text-destructive">
+                            <AlertCircle className="h-4 w-4" />
+                            <span>{errors.foodType}</span>
+                          </div>
+                        )}
                         <Select
                           value={formData.foodType}
-                          onValueChange={(value) => setFormData({ ...formData, foodType: value })}
+                          onValueChange={(value) => {
+                            setFormData({ ...formData, foodType: value })
+                            // Clear foodType error when user selects
+                            if (errors.foodType) {
+                              setErrors(prev => {
+                                const newErrors = {...prev}
+                                delete newErrors.foodType
+                                return newErrors
+                              })
+                            }
+                          }}
                         >
-                          <SelectTrigger id="foodType">
+                          <SelectTrigger id="foodType" className={errors.foodType ? "border-destructive" : ""}>
                             <SelectValue placeholder="Select food type" />
                           </SelectTrigger>
                           <SelectContent>
@@ -234,13 +401,30 @@ export default function FoodDonationPage() {
 
                       <div className="space-y-2">
                         <Label htmlFor="quantity">Quantity (in kg) *</Label>
+                        {errors.quantity && (
+                          <div className="flex items-center gap-2 text-sm text-destructive">
+                            <AlertCircle className="h-4 w-4" />
+                            <span>{errors.quantity}</span>
+                          </div>
+                        )}
                         <Input
                           id="quantity"
                           type="number"
                           required
                           value={formData.quantity}
-                          onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-                          placeholder="Enter quantity in kilograms"
+                          onChange={(e) => {
+                            setFormData({ ...formData, quantity: e.target.value })
+                            // Clear quantity error when user types
+                            if (errors.quantity) {
+                              setErrors(prev => {
+                                const newErrors = {...prev}
+                                delete newErrors.quantity
+                                return newErrors
+                              })
+                            }
+                          }}
+                          placeholder="Enter quantity in kilograms (minimum 5kg)"
+                          className={errors.quantity ? "border-destructive" : ""}
                         />
                       </div>
 

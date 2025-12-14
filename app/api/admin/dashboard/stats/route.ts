@@ -8,6 +8,7 @@ import Complaint from '@/models/Complaint'
 import CameraAnalysis from '@/models/CameraAnalysis'
 import Contact from '@/models/Contact'
 import AdoptionApplication from '@/models/AdoptionApplication'
+import Payment from '@/models/Payment' // Added Payment model
 
 export async function GET() {
   try {
@@ -37,6 +38,8 @@ export async function GET() {
       totalCameraAnalyses,
       totalContacts,
       totalAdoptions,
+      totalPayments, // Added total payments count
+      successfulPayments, // Added successful payments count
       monthlyMoneyDonations,
       weeklyStats,
       dailyStats,
@@ -53,6 +56,8 @@ export async function GET() {
       CameraAnalysis.countDocuments(),
       Contact.countDocuments(),
       AdoptionApplication.countDocuments(),
+      Payment.countDocuments(), // Added total payments count
+      Payment.countDocuments({ paymentStatus: 'completed' }), // Added successful payments count
       
       // Monthly money donations sum
       MoneyDonation.aggregate([
@@ -124,6 +129,8 @@ export async function GET() {
       foodDonations: totalFoodDonations,
       moneyDonations: totalMoneyDonations,
       cameraAnalyses: totalCameraAnalyses,
+      totalPayments: totalPayments, // Added total payments
+      successfulPayments: successfulPayments, // Added successful payments
       totalDonationAmount: totalDonationAmount[0]?.total || 0,
       
       overview: {

@@ -20,6 +20,7 @@ import {
   Search,
   Download,
   RefreshCw,
+  CreditCard,
 } from 'lucide-react'
 import { format } from 'date-fns'
 
@@ -63,6 +64,7 @@ export default function DataTables() {
       memberships: '/api/memberships',
       foodDonations: '/api/donations/food',
       moneyDonations: '/api/donations/money',
+      payments: '/api/payments',
       cameraAnalyses: '/api/helpline/camera',
     }
     return endpoints[type] || '/api/adoptions'
@@ -90,6 +92,7 @@ export default function DataTables() {
     { id: 'memberships', label: 'Memberships', icon: UserPlus, color: 'text-purple-500' },
     { id: 'foodDonations', label: 'Food Donations', icon: Utensils, color: 'text-green-500' },
     { id: 'moneyDonations', label: 'Money Donations', icon: DollarSign, color: 'text-yellow-500' },
+    { id: 'payments', label: 'Payments', icon: CreditCard, color: 'text-blue-500' },
     { id: 'cameraAnalyses', label: 'Camera Reports', icon: Camera, color: 'text-indigo-500' },
   ]
 
@@ -185,6 +188,11 @@ export default function DataTables() {
           {/* Money Donations Table */}
           <TabsContent value="moneyDonations">
             <MoneyDonationsTable data={data.moneyDonations} searchTerm={searchTerm} isLoading={isLoading} />
+          </TabsContent>
+
+          {/* Payments Table */}
+          <TabsContent value="payments">
+            <PaymentsTable data={data.payments} searchTerm={searchTerm} isLoading={isLoading} />
           </TabsContent>
 
           {/* Camera Analyses Table */}
@@ -545,11 +553,12 @@ function MoneyDonationsTable({ data, searchTerm, isLoading }: any) {
   )
 }
 
-// Camera Analyses Table Component
-function CameraAnalysesTable({ data, searchTerm, isLoading }: any) {
-  const filteredData = data.filter((item: any) =>
-    Object.values(item).some((val) =>
-      String(val).toLowerCase().includes(searchTerm.toLowerCase())
+// Payments Table Component
+function PaymentsTable({ data, searchTerm, isLoading }: any) {
+  // Ensure data is an array before filtering
+  const filteredData = (data || []).filter((item: any) =>
+    Object.values(item || {}).some((val) =>
+      String(val || '').toLowerCase().includes((searchTerm || '').toLowerCase())
     )
   )
 
@@ -562,18 +571,100 @@ function CameraAnalysesTable({ data, searchTerm, isLoading }: any) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Contact</TableHead>
-            <TableHead>Address</TableHead>
-            <TableHead>Files</TableHead>
-            <TableHead>Urgency</TableHead>
+            <TableHead>Donor Name</TableHead>
+            <TableHead>Email</TableHead>
+            <TableHead>Amount</TableHead>
+            <TableHead>Payment Method</TableHead>
+            <TableHead>Card Last 4</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Transaction ID</TableHead>
             <TableHead>Date</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {filteredData.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+              <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                No records found
+              </TableCell>
+            </TableRow>
+          ) : (
+            filteredData.map((item: any, index: number) => (
+              <motion.tr
+                key={item?._id || index}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: index * 0.05 }}
+                className="border-b"
+              >
+                <TableCell className="font-medium">{item?.name || 'N/A'}</TableCell>
+                <TableCell>{item?.email || 'N/A'}</TableCell>
+                <TableCell className="font-semibold">₹{item?.amount?.toLocaleString() || 0}</TableCell>
+                <TableCell className="capitalize">{item?.paymentMethod || 'N/A'}</TableCell>
+                <TableCell>{item?.cardLastFour || 'N/A'}</TableCell>
+                <TableCell>
+                  <Badge
+                    variant="outline"
+                    className={
+                      item?.paymentStatus === 'completed'
+                        ? 'bg-green-500/10 text-green-500 border-green-500/20'
+                        : item?.paymentStatus === 'failed'
+                        ? 'bg-red-500/10 text-red-500 border-red-500/20'
+                        : item?.paymentStatus === 'pending'
+                        ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
+                        : 'bg-gray-500/10 text-gray-500 border-gray-500/20'
+                    }
+                  >
+                    {item?.paymentStatus || 'unknown'}
+                  </Badge>
+                </TableCell>
+                <TableCell className="font-mono text-xs">{item?.transactionId || 'N/A'}</TableCell>
+                <TableCell>{item?.createdAt ? format(new Date(item.createdAt), 'MMM dd, yyyy HH:mm') : 'N/A'}</TableCell>
+              </motion.tr>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </ScrollArea>
+  )
+}
+
+// Camera Analyses Table Component
+function CameraAnalysesTable({ data, searchTerm, isLoading }: any) {
+  const filteredData = data.filter((item: any) =>
+    Object.values(item).some((val) =>
+      String(val).toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  )
+
+  if (isLoading) {
+    return <div className="text-center py-8">Loading...</div>
+  }
+
+  // Function to open image in new tab
+  const viewImage = (imagePath: string) => {
+    const fullUrl = `${window.location.origin}${imagePath}`;
+    window.open(fullUrl, '_blank');
+  };
+
+  return (
+    <ScrollArea className="h-[500px]">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Name</TableHead>
+            <TableHead>Contact</TableHead>
+            <TableHead>Address</TableHead>
+            <TableHead>Files</TableHead>
+            <TableHead>Urgency</TableHead>
+            <TableHead>Actions</TableHead>
+            <TableHead>Date</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {filteredData.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                 No records found
               </TableCell>
             </TableRow>
@@ -605,6 +696,25 @@ function CameraAnalysesTable({ data, searchTerm, isLoading }: any) {
                   >
                     {item.urgencyLevel}
                   </Badge>
+                </TableCell>
+                <TableCell>
+                  <div className="flex flex-wrap gap-2">
+                    {item.files && item.files.length > 0 ? (
+                      item.files.map((file: any, fileIndex: number) => (
+                        <Button
+                          key={fileIndex}
+                          size="sm"
+                          variant="outline"
+                          onClick={() => viewImage(file.path)}
+                          className="h-8 px-2"
+                        >
+                          View {fileIndex + 1}
+                        </Button>
+                      ))
+                    ) : (
+                      <span className="text-muted-foreground text-sm">No images</span>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell>{format(new Date(item.createdAt), 'MMM dd, yyyy')}</TableCell>
               </motion.tr>
