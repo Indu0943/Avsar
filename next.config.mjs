@@ -16,7 +16,7 @@ const nextConfig = {
   compress: true,
   // Optimize page loading
   experimental: {
-    optimizeCss: true,
+    optimizeCss: false,
   },
   // Add performance optimizations
   poweredByHeader: false,
