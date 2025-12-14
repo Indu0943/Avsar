@@ -1,4 +1,4 @@
-# AVSAR - Animal Volunteer Services and Rescue
+# AVSAR - Animal welfare organisation
 
 A comprehensive web application for animal rescue organizations to manage adoptions, donations, memberships, and helpline services.
 
